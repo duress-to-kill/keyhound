@@ -3,6 +3,10 @@
 # mancat on irc.cat.pdx.edu, and at TheCAT, Portland State University
 # www.github.com/mongolsamurai
 
+#
+# Configurables begin here.
+#
+
 # This is where your SSH server looks for authorized pubkeys for remote logins to your account
 AUTHORIZED_KEYS_FILE=~/.ssh/authorized_keys
 
@@ -10,7 +14,7 @@ AUTHORIZED_KEYS_FILE=~/.ssh/authorized_keys
 KEYDIR="`dirname $0`/pubkeys/"
 
 #This is the lowest security ring you intend to use. Higher numbers are lower security.
-LOWRING=3
+LOWRING=2
 
 KEYS_LEVEL[0]="amanita
   galerina"
@@ -22,10 +26,16 @@ KEYS_LEVEL[2]="${KEYS_LEVEL[1]}
   hedgehog
   bolete
   chicken-of-the-woods"
-KEYS_LEVEL[3]="${KEYS_LEVEL[2]}
-  woodear
-  toadstool"
+#KEYS_LEVEL[3]="${KEYS_LEVEL[2]}
+#  woodear
+#  toadstool"
 #KEYS_LEVEL[4]="${KEYS_LEVEL[3]} "
+
+
+#
+# Helper functions begin here.
+# Code below here is not intended for configuration.
+#
 
 helptext() {
   cat <<- ENDOFHELP
@@ -63,6 +73,21 @@ done
 exit
 }
 
+#
+# Main body code begins here.
+#
+
+# FIXME: Add checks to ensure that the dirname for AUTHORIZED_KEYS_FILE exists,
+#   and that the file has proper perms.
+# FIXME: Add ssh key fingerprint checking to verify that keys are valid.
+# FIXME: Change sanity check for flag processing on p|P|i to use integer math on
+#   $LOWRING instead of (in addition to?) string length checking on array contents.
+# FIXME: Add signal handler to clean up tempfile on ^C and ^\.
+# FIXME: Use a configurable to choose where to create tempfile, instead of assuming
+#   ~/.ssh exists.
+# FIXME: Create a comment in AUTHORIZED_KEYS_FILE with security ring and timestamp
+# FIXME: Test all changes since beta version.
+
 while getopts hlAcf:d:i:p:P: FLAG; do
   ARGS=true
   case $FLAG in
@@ -93,7 +118,7 @@ while getopts hlAcf:d:i:p:P: FLAG; do
       [ -n "$RING" ] && helptext
       OP_KEYCHECK=true
       ;;
-    h)
+    *)
       helptext
       ;;
   esac
@@ -120,14 +145,17 @@ chmod 600 $TEMPFILE
 for HOST in ${KEYS_LEVEL[$RING]}; do
   # If OP_LOCAL_KEY isn't set, and we're processing our own key, skip it.
   [ "$HOST" == "`hostname`" ] && [ -z "$OP_LOCAL_KEY" ] && continue
+
   KEYFILE="${KEYDIR}id_rsa.pub.${HOST}"
+
   # If we're missing one or more keys, print a warning and continue.
   [ -f "$KEYFILE" ] || { echo "Warning: Unable to find key ${KEYFILE}."; continue;}
+
   # Safety check to make sure the key we asked for is the one we found
   grep -q "$HOST" "$KEYFILE" || { key_comment_warning "$HOST" "$KEYFILE"; continue;}
+
   # Don't add the key if it's already in the file. Mostly for append mode.
   grep -q "`cat $KEYFILE`" $TEMPFILE || cat $KEYFILE >> $TEMPFILE
-  #cat $KEYFILE
 done
 
 echo
