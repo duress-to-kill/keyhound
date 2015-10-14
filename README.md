@@ -13,7 +13,7 @@ As it turns out, in this eventuality I've saved you the effort of actually writi
 ## Setup
 Keyhound is pretty simple. It has just a few expectations.
 
-Mostly, it assumes that you have a directory where you collect all your SSH public keys, and you use something (like git, or rsync) to sync a local copy of this directory to each host where you want to use keyhound. 
+Mostly, it assumes that you have a directory where you collect all your SSH public keys, and you use something (like git, or rsync) to sync a local copy of this directory to each host where you want to use keyhound. I've populated pubkeys/ with some dummy keys for testing. All of the corresponding private keys were immediately deleted, so the pubkeys are harmless. Of course, it would be immensely irresponsible of you to trust me about that, but you can specify a dummy authorized_keys file for testing purposes.
 
 It also assumes your pubkeys follow the general naming scheme of "id_rsa.pub.name", where "name" corresponds to a string that appears in the key's comment (this normally defaults to "username@host", according to wherever the key was initially created). In my environment, "name" is equivalent to the name of the host that that public key is associated with.
 
