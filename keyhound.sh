@@ -13,7 +13,7 @@ AUTHORIZED_KEYS_FILE=~/.ssh/authorized_keys
 # This is a folder where keyhound will look for your pubkey collection
 KEYDIR="`dirname $0`/pubkeys/"
 
-#This is the lowest security ring you intend to use. Higher numbers are lower security.
+# This is the lowest security ring you intend to use. Higher numbers are lower security.
 LOWRING=2
 
 KEYS_LEVEL[0]="amanita
@@ -74,19 +74,19 @@ exit
 }
 
 #
-# Main body code begins here.
+# Fixmes without a specific associated line go here.
 #
 
-# FIXME: Add checks to ensure that the dirname for AUTHORIZED_KEYS_FILE exists,
-#   and that the file has proper perms.
 # FIXME: Add ssh key fingerprint checking to verify that keys are valid.
 # FIXME: Change sanity check for flag processing on p|P|i to use integer math on
 #   $LOWRING instead of (in addition to?) string length checking on array contents.
 # FIXME: Add signal handler to clean up tempfile on ^C and ^\.
-# FIXME: Use a configurable to choose where to create tempfile, instead of assuming
-#   ~/.ssh exists.
-# FIXME: Create a comment in AUTHORIZED_KEYS_FILE with security ring and timestamp
+# FIXME: Strip comments out of any lines copied from existing file during append operation
 # FIXME: Test all changes since beta version.
+
+#
+# Argument parsing begins here.
+#
 
 while getopts hlAcf:d:i:p:P: FLAG; do
   ARGS=true
@@ -127,6 +127,26 @@ done
 # If no arguments were given, print help test and exit
 [ -z "$ARGS" ] && helptext
 
+#
+# Parameter sanity checking begins here.
+#
+
+# General sanity check for the desitnation directory for AUTHORIZED_KEYS_FILE
+AUTHORIZED_KEYS_DIR=`dirname "$AUTHORIZED_KEYS_FILE"`
+if [ ! -d "$AUTHORIZED_KEYS_DIR" ] || [ ! -w "$AUTHORIZED_KEYS_DIR" ]; then
+  cat <<- ENDOFNOTICE
+	The specified directory ($AUTHORIZED_KEYS_DIR) for your authorized_keys file doesn't exist, or doesn'thave the correct permissions.
+	ENDOFNOTICE
+  read -p "Fix this? [Y/n]: " RESPONSE
+  echo "$RESPONSE" | egrep -q '^[Yy]' || { echo "Aborting..."; exit;}
+  mkdir -p "$AUTHORIZED_KEYS_DIR" 2> /dev/null
+  chmod 600 "$AUTHORIZED_KEYS_DIR" 2> /dev/null
+fi
+
+#
+# Task execution blocks begin here.
+#
+
 # If a key check was requested, run the function with any specified keydir and authorized key file, andexit.
 [ -n "$OP_KEYCHECK" ] && check_keys "$KEYDIR" "$AUTHORIZED_KEYS_FILE"
 
@@ -138,9 +158,10 @@ if [ "$OP_MODE" == "p" ]; then
   exit
 fi
 
-TEMPFILE=`mktemp -p ~/.ssh/ authorized_keys-temp.XXXXX`
+TEMPFILE=`mktemp -p "$AUTHORIZED_KEYS_DIR" authorized_keys-temp.XXXXXX`
 chmod 600 $TEMPFILE
-[ -n "$OP_APPEND" ] && cat $AUTHORIZED_KEYS_FILE > $TEMPFILE
+echo "# File created by `basename $0`, `date` at security ring $RING" > $TEMPFILE
+[ -n "$OP_APPEND" ] && cat $AUTHORIZED_KEYS_FILE >> $TEMPFILE
 
 for HOST in ${KEYS_LEVEL[$RING]}; do
   # If OP_LOCAL_KEY isn't set, and we're processing our own key, skip it.
