@@ -56,10 +56,6 @@ helptext() {
   exit
 }
 
-key_comment_warning() {
-  echo "WARNING! \"$1\" does not appear in the key $2. Check its contents to be sure it is correct."
-}
-
 check_keys() {
 IFS='
 '
@@ -77,11 +73,7 @@ exit
 # Fixmes without a specific associated line go here.
 #
 
-# FIXME: Add ssh key fingerprint checking to verify that keys are valid.
-# FIXME: Change sanity check for flag processing on p|P|i to use integer math on
-#   $LOWRING instead of (in addition to?) string length checking on array contents.
 # FIXME: Add signal handler to clean up tempfile on ^C and ^\.
-# FIXME: Strip comments out of any lines copied from existing file during append operation
 # FIXME: Test all changes since beta version.
 
 #
@@ -94,7 +86,7 @@ while getopts hlAcf:d:i:p:P: FLAG; do
     p | P | i)
       [ -n "$RING" ] && helptext
       [ -n "$OP_KEYCHECK" ] && helptext
-      [ -z "${KEYS_LEVEL[${OPTARG}]}" ] &&\
+      [ "$OPTARG" -ge 0 ] && [ "$OPTARG" -le $LOWRING ] && [ -n "${KEYS_LEVEL[${OPTARG}]}" ] ||\
         echo "Syntax error: \"$OPTARG\" is not a valid security ring. Try 0-{LOWRING}." && helptext
       OP_MODE=$FLAG
       RING=$OPTARG
@@ -161,7 +153,7 @@ fi
 TEMPFILE=`mktemp -p "$AUTHORIZED_KEYS_DIR" authorized_keys-temp.XXXXXX`
 chmod 600 $TEMPFILE
 echo "# File created by `basename $0`, `date` at security ring $RING" > $TEMPFILE
-[ -n "$OP_APPEND" ] && cat $AUTHORIZED_KEYS_FILE >> $TEMPFILE
+[ -n "$OP_APPEND" ] && cat $AUTHORIZED_KEYS_FILE | sed -e '/^#/ d' >> $TEMPFILE
 
 for HOST in ${KEYS_LEVEL[$RING]}; do
   # If OP_LOCAL_KEY isn't set, and we're processing our own key, skip it.
@@ -172,8 +164,13 @@ for HOST in ${KEYS_LEVEL[$RING]}; do
   # If we're missing one or more keys, print a warning and continue.
   [ -f "$KEYFILE" ] || { echo "Warning: Unable to find key ${KEYFILE}."; continue;}
 
-  # Safety check to make sure the key we asked for is the one we found
-  grep -q "$HOST" "$KEYFILE" || { key_comment_warning "$HOST" "$KEYFILE"; continue;}
+  # Fingerprint the key to make sure it's syntactically valid.
+  ssh-keygen -l -f "$KEYFILE" &> /dev/null || \
+    { echo "Warning: ${KEYFILE} is not a valid public key."; continue;}
+
+  # Safety check to make sure the key we asked for is the one we found.
+  grep -q "$HOST" "$KEYFILE" || \
+    { echo "WARNING! \"${1}\" does not appear in the key $2. Check its contents to be sure it is correct."; continue;}
 
   # Don't add the key if it's already in the file. Mostly for append mode.
   grep -q "`cat $KEYFILE`" $TEMPFILE || cat $KEYFILE >> $TEMPFILE
