@@ -59,6 +59,7 @@ check_keys() {
 IFS='
 '
 for KEY in `cat $2`; do
+  echo "$KEY" | egrep -q '^#' && continue
   grep -q "$KEY" ${1}* || cat <<- ENDOFWARNING
 	WARNING! The following public key was found in ${2}, but was not present in any pubkey file in ${1}!
 	$KEY
