@@ -39,7 +39,6 @@ KEYS_LEVEL[2]="${KEYS_LEVEL[1]}
 
 helptext() {
   cat <<- ENDOFHELP
-	Usage:
 	$0 <-p|-P|-i> <0-${LOWRING}> [-l] [-A]
 	$0 -c
 	$0 -h
@@ -84,10 +83,10 @@ while getopts hlAcf:d:i:p:P: FLAG; do
   ARGS=true
   case $FLAG in
     p | P | i)
-      [ -n "$RING" ] && helptext
-      [ -n "$OP_KEYCHECK" ] && helptext
+      [ -z "$RING" ] && [ -z "$OP_KEYCHECK" ] || \
+        { echo "Syntax error: -c, -p, -P, -i are mutually incompatible."; helptext;}
       [ "$OPTARG" -ge 0 ] && [ "$OPTARG" -le $LOWRING ] && [ -n "${KEYS_LEVEL[${OPTARG}]}" ] ||\
-        echo "Syntax error: \"$OPTARG\" is not a valid security ring. Try 0-{LOWRING}." && helptext
+        { echo "Syntax error: security ring \"$OPTARG\" is undefined. Try 0-${LOWRING}."; helptext;}
       OP_MODE=$FLAG
       RING=$OPTARG
       ;;
@@ -107,17 +106,22 @@ while getopts hlAcf:d:i:p:P: FLAG; do
       OP_APPEND=true
       ;;
     c)
-      [ -n "$RING" ] && helptext
+      [ -n "$RING" ] && { echo "Syntax error: -c, -p, -P, -i are mutually incompatible."; helptext;}
       OP_KEYCHECK=true
       ;;
+    h)
+      echo "Usage:"
+      helptext
+      ;;
     *)
+      echo "Syntax error: $FLAG is not a valid argument."
       helptext
       ;;
   esac
 done
 
 # If no arguments were given, print help test and exit
-[ -z "$ARGS" ] && helptext
+[ -z "$ARGS" ] && { echo "Usage:"; helptext;}
 
 #
 # Parameter sanity checking begins here.
