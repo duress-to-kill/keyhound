@@ -137,7 +137,7 @@ if [ ! -d "$AUTHORIZED_KEYS_DIR" ] || [ ! -w "$AUTHORIZED_KEYS_DIR" ]; then
   read -p "Fix this? [Y/n]: " RESPONSE
   echo "$RESPONSE" | egrep -q '^[Yy]' || { echo "Aborting..."; exit;}
   mkdir -p "$AUTHORIZED_KEYS_DIR" 2> /dev/null
-  chmod 600 "$AUTHORIZED_KEYS_DIR" 2> /dev/null
+  chmod 700 "$AUTHORIZED_KEYS_DIR" 2> /dev/null
 fi
 
 #
