@@ -196,8 +196,9 @@ else
   fi
   echo "$RESPONSE" | egrep -q '^[Yy].*' &&\
     cat $TEMPFILE > $AUTHORIZED_KEYS_FILE
+    chmod 700 $AUTHORIZED_KEYS_FILE
 fi
 
-rm $TEMPFILE
+rm -f $TEMPFILE
 
 exit
